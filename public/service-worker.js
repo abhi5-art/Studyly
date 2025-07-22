@@ -1,55 +1,87 @@
-let cachedData  = "appV1"
-self.addEventListener("install", (event) => {
-    event.waitUntil(
-        caches.open(cachedData ).then((cache) => {
-       const urls = [
-        "/static/js/main.*.js",
-        "/static/css/main.*.css",
-        "/index.html",
-        "/index.css",
-        "/static/media/banner.8e687823b1422880cc3f.mp4",
-        "/",]
-        for(let i=0;i<urls.length;i++){
-            try{
-            cache.add(urls[i])
-            console.log("cached",urls[i])
-            }
-            catch(err){
-                console.log(err)
-            }
-        }
-        }
-        )
-    )
+const CACHE_NAME = 'appV2';
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/index.css',
+  '/static/js/main.js',
+  '/static/css/main.css',
+  '/static/media/banner.8e687823b1422880cc3f.mp4'
+];
+
+// Installation Phase
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Opened cache');
+        return cache.addAll(STATIC_ASSETS);
+      })
+      .catch(err => {
+        console.log('Cache addAll failed:', err);
+      })
+  );
 });
 
-self.addEventListener("fetch", (event) => {
-    const requestUrl = new URL(event.request.url);
-
-    if (requestUrl.origin === 'https://api.dicebear.com' && requestUrl.pathname === '/5.x/initials/svg') {
-        event.respondWith(
-            caches.open('user-image-cache').then(function(cache) {
-                return cache.match(event.request).then(function (response) {
-                    return response || fetch(event.request).then(function(response) {
-                        cache.put(event.request, response.clone());
-                        return response;
-                    });
-                });
-            })
-        );
-    }
-    
-    if(!navigator.onLine){
-    event.respondWith(
-        caches.match(event.request).then((resp) => {
-            if(resp){
-                return resp
-            }
-            let requestUrl = event.request.clone();
-             return fetch(requestUrl)
+// Activation & Cleanup
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
         })
-    )
-    }
-})
+      );
+    })
+  );
+});
 
+// Fetch Handling
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  
+  // Skip non-GET requests
+  if (request.method !== 'GET') return;
 
+  const requestUrl = new URL(request.url);
+
+  // API Cache Strategy
+  if (requestUrl.origin === 'https://api.dicebear.com' && 
+      requestUrl.pathname.startsWith('/5.x/initials/svg')) {
+    event.respondWith(cacheFirst(request, 'avatar-cache'));
+    return;
+  }
+
+  // Static Assets Strategy
+  event.respondWith(
+    networkFirst(request)
+      .catch(() => caches.match('/offline.html'))
+  );
+});
+
+// Strategies
+const cacheFirst = async (request, cacheName = CACHE_NAME) => {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+  return cachedResponse || fetchAndCache(request, cache);
+};
+
+const networkFirst = async (request) => {
+  try {
+    const networkResponse = await fetch(request);
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, networkResponse.clone());
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    return cachedResponse || Promise.reject('No cache');
+  }
+};
+
+const fetchAndCache = async (request, cache) => {
+  const networkResponse = await fetch(request);
+  cache.put(request, networkResponse.clone());
+  return networkResponse;
+};

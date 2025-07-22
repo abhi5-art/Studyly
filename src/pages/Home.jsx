@@ -3,7 +3,7 @@ import {FaArrowRight} from 'react-icons/fa';
 import {Link} from 'react-router-dom';
 import CTAButton from '../Components/core/HomePage/Button';
 import HighlightText from '../Components/core/HomePage/HighlightText';
-import Banner from "../assets/Images/banner.mp4"
+import Banner from "../assets/Images/banner1.mp4"
 import CodeBlocks from "../Components/core/HomePage/CodeBlocks";
 import TimelineSection from '../Components/core/HomePage/TimelineSection';
 import LearningLanguageSection from '../Components/core/HomePage/LearningLanguageSection';
@@ -16,7 +16,6 @@ import CourseSlider from '../Components/core/Catalog/CourseSlider';
 import { useEffect } from 'react';
 import { useState } from 'react';
 import RatingSlider from '../Components/core/Ratings/RatingSlider';
-
 
 function Home() {
     const [CatalogPageData, setCatalogPageData] = useState(null);
@@ -35,6 +34,7 @@ function Home() {
         }
     }, [categoryID])
     const dispatch = useDispatch();
+
   return (
     <div>
         <div className=' mx-auto relative flex flex-col w-11/12 items-center justify-between text-white '>
@@ -108,7 +108,6 @@ function Home() {
         <h2 className='section_heading mb-6 md:text-3xl text-xl'>
            Most Popular Courses
         </h2>
-        <CourseSlider Courses={CatalogPageData?.selectedCourses}/>
       </div>       
         <div className=' mx-auto box-content w-full max-w-maxContentTab px- py-12 lg:max-w-maxContent'>
         <h2 className='section_heading mb-6 md:text-3xl text-xl'>
